@@ -1,4 +1,4 @@
 streamlit
 pandas
 requests
-Pillow
+st-gsheets-connection
