@@ -89,6 +89,7 @@ def upload_receipt_to_drive(uploaded_file, student_id, year_month):
     except Exception as e:
         st.error(f"上傳圖片時發生連線錯誤: {e}")
         return f"[圖片已提交（上傳雲端失敗）: {uploaded_file.name}]"
+
 # 3. 三大分頁
 tab_news, tab_activities, tab_savings = st.tabs(["📢 最新消息", "🎯 活動報名", "💰 每月存款"])
 
@@ -178,9 +179,10 @@ with tab_activities:
             with st.form("reg_form", clear_on_submit=True):
                 st.write("##### 填寫活動報名")
                 chosen_act = st.selectbox("1. 選擇報名活動 *", list(act_dict.keys()))
-                reg_stu_id = st.text_input("2. 計劃編號 *", placeholder="例：CDF11/SSP/001").strip().upper()
-                reg_phone4 = st.text_input("3. 登記電話最後 4 個字（身分核對）*", placeholder="例：1234", max_chars=4).strip()
-                reg_headcount = st.selectbox("4. 參加人數 *", ["1人 (學童)", "2人 (學童及家長)"])
+                reg_district = st.selectbox("2. 所屬區域 *", ["深水埗區", "九龍城及油尖旺區", "觀塘區"])
+                reg_stu_id = st.text_input("3. 計劃編號 *", placeholder="例：001").strip().upper()
+                reg_phone4 = st.text_input("4. 登記電話最後 4 個字（身分核對）*", placeholder="例：1234", max_chars=4).strip()
+                reg_headcount = st.selectbox("5. 參加人數 *", ["1人 (學童)", "2人 (學童及家長)"])
                 
                 if st.form_submit_button("確認提交報名 🚀", use_container_width=True):
                     if not reg_stu_id:
@@ -189,14 +191,6 @@ with tab_activities:
                         st.error("電話最後 4 個字必須為 4 位數字！")
                     else:
                         act_id, act_title = act_dict[chosen_act]
-                        new_reg = pd.DataFrame([{
-                            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "活動類別(Activity_ID)": act_id,
-                            "活動名稱(Activity_Title)": act_title,
-                            "計劃編號(Participant_ID)": reg_stu_id,
-                            "登記電話最後4個字(Phone_Last4)": reg_phone4,
-                            "參加人數(Headcount)": reg_headcount
-                        }])
                         
                         reg_data = conn.read(worksheet="Registrations", ttl=0)
                         if reg_data is not None:
@@ -204,10 +198,23 @@ with tab_activities:
                         else:
                             reg_data = pd.DataFrame()
 
+                        # 自動匹配試算表中的區域欄位名稱，若無則預設為 "所屬區域(District)"
+                        district_reg_col = [c for c in reg_data.columns if ("區" in c or "District" in c)][0] if (not reg_data.empty and any(("區" in c or "District" in c) for c in reg_data.columns)) else "所屬區域(District)"
+
+                        new_reg = pd.DataFrame([{
+                            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            district_reg_col: reg_district,
+                            "活動類別(Activity_ID)": act_id,
+                            "活動名稱(Activity_Title)": act_title,
+                            "計劃編號(Participant_ID)": reg_stu_id,
+                            "登記電話最後4個字(Phone_Last4)": reg_phone4,
+                            "參加人數(Headcount)": reg_headcount
+                        }])
+
                         updated_reg = pd.concat([reg_data, new_reg], ignore_index=True)
                         conn.update(worksheet="Registrations", data=updated_reg)
                         st.cache_data.clear()
-                        st.success(f"🎉 報名成功！已記錄計劃編號：{reg_stu_id}")
+                        st.success(f"🎉 報名成功！已記錄計劃編號：{reg_stu_id}（{reg_district}）")
     except Exception as e:
         st.warning(f"暫時未能載入活動 (錯誤詳情: {e})")
 
