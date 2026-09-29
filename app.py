@@ -52,7 +52,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-title">兒童發展基金 (CDF)</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">浸信會愛羣社會服務處 · 家長及學童專屬平台</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">浸信會愛羣社會服務處 · 家長、學童及友師專屬平台</div>', unsafe_allow_html=True)
 
 # 2. 連接 Google Sheet
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -90,8 +90,8 @@ def upload_receipt_to_drive(uploaded_file, student_id, year_month):
         st.error(f"上傳圖片時發生連線錯誤: {e}")
         return f"[圖片已提交（上傳雲端失敗）: {uploaded_file.name}]"
 
-# 3. 三大分頁
-tab_news, tab_activities, tab_savings = st.tabs(["📢 最新消息", "🎯 活動報名", "💰 每月存款"])
+# 3. 四大分頁
+tab_news, tab_activities, tab_savings, tab_mentors = st.tabs(["📢 最新消息", "🎯 活動報名", "💰 每月存款", "🤝 友師記錄"])
 
 # ==================== 分頁一：最新消息 ====================
 with tab_news:
@@ -180,7 +180,7 @@ with tab_activities:
                 st.write("##### 填寫活動報名")
                 chosen_act = st.selectbox("1. 選擇報名活動 *", list(act_dict.keys()))
                 reg_district = st.selectbox("2. 所屬區域 *", ["深水埗區", "九龍城及油尖旺區", "觀塘區"])
-                reg_stu_id = st.text_input("3. 計劃編號 *", placeholder="例：001").strip().upper()
+                reg_stu_id = st.text_input("3. 計劃編號 *", placeholder="例：CDF11/SSP/001").strip().upper()
                 reg_phone4 = st.text_input("4. 登記電話最後 4 個字（身分核對）*", placeholder="例：1234", max_chars=4).strip()
                 reg_headcount = st.selectbox("5. 參加人數 *", ["1人 (學童)", "2人 (學童及家長)"])
                 
@@ -198,7 +198,6 @@ with tab_activities:
                         else:
                             reg_data = pd.DataFrame()
 
-                        # 自動匹配試算表中的區域欄位名稱，若無則預設為 "所屬區域(District)"
                         district_reg_col = [c for c in reg_data.columns if ("區" in c or "District" in c)][0] if (not reg_data.empty and any(("區" in c or "District" in c) for c in reg_data.columns)) else "所屬區域(District)"
 
                         new_reg = pd.DataFrame([{
@@ -229,7 +228,7 @@ with tab_savings:
 
     with st.form("savings_form", clear_on_submit=True):
         sav_district = st.selectbox("1. 所屬區份 *", ["深水埗 (SSP)", "九龍城及油尖旺 (KCY)", "觀塘 (KTG)"])
-        sav_student_id = st.text_input("2. 學生編號 *", placeholder="例：001").strip().upper()
+        sav_student_id = st.text_input("2. 學生編號 *", placeholder="例：CDF11/SSP/001").strip().upper()
         
         today = date.today()
         month_options = [
@@ -238,7 +237,7 @@ with tab_savings:
         ]
         sav_month = st.selectbox("3. 存款月份 *", month_options)
         sav_amount = st.number_input("4. 存款金額 (HK$) *", min_value=100.0, max_value=1000.0, value=200.0, step=50.0)
-        sav_depositor = st.text_input("5. 存款人姓名 *", placeholder="例：陳大文").strip()
+        sav_depositor = st.text_input("5. 存款人姓名／關係 *", placeholder="例：陳大文 (父親)").strip()
         
         col1, col2 = st.columns(2)
         with col1:
@@ -288,3 +287,95 @@ with tab_savings:
                         st.info(f"已記錄學生編號：**{sav_student_id}**（{sav_district}，{sav_month}，HK$ {sav_amount:.2f}）")
                     except Exception as e:
                         st.error(f"提交失敗，請稍後重試 (錯誤詳情: {e})")
+
+# ==================== 分頁四：友師記錄 ====================
+with tab_mentors:
+    st.write("#### 🤝 友師每月接觸記錄")
+    st.markdown("""
+    <div class="privacy-notice">
+        🔒 <b>私隱保障</b>：本表格不收集友師及學童之全名或完整電話，請憑「分區」、「學生編號」及「友師電話最後4位數字」核對記錄。
+    </div>
+    """, unsafe_allow_html=True)
+
+    today = date.today()
+    # 提供當前月份及前兩個月份供選擇
+    mentor_month_options = []
+    y, m = today.year, today.month
+    for _ in range(3):
+        mentor_month_options.append(f"{y}年{m}月")
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+
+    with st.form("mentor_form", clear_on_submit=True):
+        st.write("##### 1. 基本資料")
+        m_col1, m_col2 = st.columns(2)
+        with m_col1:
+            mentor_district = st.selectbox("所屬區域 *", ["深水埗區", "九龍城及油尖旺區", "觀塘區"])
+        with m_col2:
+            mentor_month = st.selectbox("記錄月份 *", mentor_month_options)
+
+        m_col3, m_col4 = st.columns(2)
+        with m_col3:
+            mentor_stu_id = st.text_input("配對學生編號 *", placeholder="例：015 或 CDF11/SSP/015").strip().upper()
+        with m_col4:
+            mentor_phone4 = st.text_input("友師登記電話最後 4 個字 *", placeholder="例：1234", max_chars=4).strip()
+
+        st.write("---")
+        st.write("##### 2. 接觸情況及次數")
+        
+        no_contact = st.checkbox("⚠️ 本月份未有接觸學童", value=False)
+        st.caption("請填寫該月份各方式的接觸次數（若本月有接觸，請填寫對應次數）：")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            sms_count = st.number_input("📱 社交短訊（WhatsApp / Signal 等）次數", min_value=0, max_value=100, value=0, step=1)
+            f2f_count = st.number_input("👥 面對面接觸次數", min_value=0, max_value=100, value=0, step=1)
+        with c2:
+            call_count = st.number_input("📞 電話通話次數", min_value=0, max_value=100, value=0, step=1)
+            other_count = st.number_input("✨ 其他方式次數", min_value=0, max_value=100, value=0, step=1)
+
+        other_details = st.text_input("其他接觸方式說明（如有）", placeholder="例：視像通話 (Zoom)、寄送書信等").strip()
+        mentor_remarks = st.text_area("備註 / 簡述學童近況（選填）", placeholder="例：學童剛應付完考試，情緒良好...", height=80).strip()
+
+        if st.form_submit_button("確認提交友師記錄 🚀", use_container_width=True):
+            total_contacts = sms_count + call_count + f2f_count + other_count
+            if not mentor_stu_id:
+                st.error("請填寫配對學生編號！")
+            elif len(mentor_phone4) != 4 or not mentor_phone4.isdigit():
+                st.error("友師登記電話最後 4 個字必須為 4 位數字！")
+            elif not no_contact and total_contacts == 0:
+                st.error("若本月份有接觸學童，請至少填寫一項接觸次數；若本月完全未有接觸，請勾選「本月份未有接觸學童」！")
+            else:
+                try:
+                    try:
+                        mentor_data = conn.read(worksheet="MentorLogs", ttl=0)
+                        if mentor_data is not None:
+                            mentor_data = mentor_data.dropna(how="all")
+                        else:
+                            mentor_data = pd.DataFrame()
+                    except Exception:
+                        mentor_data = pd.DataFrame()
+
+                    new_mentor_log = pd.DataFrame([{
+                        "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "所屬區域(District)": mentor_district,
+                        "學生編號(Student_ID)": mentor_stu_id,
+                        "友師電話最後4個字(Mentor_Phone_Last4)": mentor_phone4,
+                        "記錄月份(Year_Month)": mentor_month,
+                        "社交短訊次數(SMS_Count)": 0 if no_contact else int(sms_count),
+                        "電話通話次數(Call_Count)": 0 if no_contact else int(call_count),
+                        "面對面次數(F2F_Count)": 0 if no_contact else int(f2f_count),
+                        "其他次數(Other_Count)": 0 if no_contact else int(other_count),
+                        "未有接觸(No_Contact)": "是" if no_contact else "否",
+                        "其他方式說明(Other_Details)": other_details,
+                        "備註(Remarks)": mentor_remarks
+                    }])
+
+                    updated_mentor = pd.concat([mentor_data, new_mentor_log], ignore_index=True)
+                    conn.update(worksheet="MentorLogs", data=updated_mentor)
+                    st.cache_data.clear()
+                    st.success(f"🎉 友師接觸記錄已成功提交！已記錄學生編號：{mentor_stu_id}（{mentor_month}）")
+                except Exception as e:
+                    st.error(f"提交失敗，請確認試算表已建立「MentorLogs」工作表 (錯誤詳情: {e})")
