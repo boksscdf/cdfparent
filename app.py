@@ -318,7 +318,7 @@ with tab_mentors:
 
         m_col3, m_col4 = st.columns(2)
         with m_col3:
-            mentor_stu_id = st.text_input("配對學生編號 *", placeholder="例：015 或 015").strip().upper()
+            mentor_stu_id = st.text_input("配對學生編號 *", placeholder="例：015").strip().upper()
         with m_col4:
             mentor_phone4 = st.text_input("友師登記電話最後 4 個字 *", placeholder="例：1234", max_chars=4).strip()
 
