@@ -330,7 +330,7 @@ with tab_mentors:
 
         c1, c2 = st.columns(2)
         with c1:
-            sms_count = st.number_input("📱 社交短訊（WhatsApp / Signal 等）次數", min_value=0, max_value=100, value=0, step=1)
+            sms_count = st.number_input("📱 社交短訊（WhatsApp / WeChat 等）次數", min_value=0, max_value=100, value=0, step=1)
             f2f_count = st.number_input("👥 面對面接觸次數", min_value=0, max_value=100, value=0, step=1)
         with c2:
             call_count = st.number_input("📞 電話通話次數", min_value=0, max_value=100, value=0, step=1)
