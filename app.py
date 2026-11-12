@@ -249,11 +249,11 @@ with tab_savings:
 
         if st.form_submit_button("確認上傳存款憑證 📤", use_container_width=True):
             if not sav_student_id:
-                st.error("請填寫學生編號！")
+                st.error("未能成功上傳，請填寫學生編號！")
             elif not sav_depositor:
-                st.error("請填寫存款人姓名！")
+                st.error("未能成功上傳，請填寫存款人姓名！")
             elif sav_file is None:
-                st.error("請拍攝並上傳入數紙相片！")
+                st.error("未能成功上傳，請拍攝並上傳入數紙相片！")
             else:
                 with st.spinner("正在上傳憑證並寫入紀錄..."):
                     receipt_link = upload_receipt_to_drive(sav_file, sav_student_id, sav_month)
@@ -342,11 +342,11 @@ with tab_mentors:
         if st.form_submit_button("確認提交友師記錄 🚀", use_container_width=True):
             total_contacts = sms_count + call_count + f2f_count + other_count
             if not mentor_stu_id:
-                st.error("請填寫配對學生編號！")
+                st.error("未能成功上傳，請填寫配對學生編號！")
             elif len(mentor_phone4) != 4 or not mentor_phone4.isdigit():
-                st.error("友師登記電話最後 4 個字必須為 4 位數字！")
+                st.error("未能成功上傳，友師登記電話最後 4 個字必須為 4 位數字！")
             elif not no_contact and total_contacts == 0:
-                st.error("若本月份有接觸學童，請至少填寫一項接觸次數；若本月完全未有接觸，請勾選「本月份未有接觸學童」！")
+                st.error("未能成功上傳，若本月份有接觸學童，請至少填寫一項接觸次數；若本月完全未有接觸，請勾選「本月份未有接觸學童」！")
             else:
                 try:
                     try:
