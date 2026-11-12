@@ -180,9 +180,9 @@ with tab_activities:
                 st.write("##### 填寫活動報名")
                 chosen_act = st.selectbox("1. 選擇報名活動 *", list(act_dict.keys()))
                 reg_district = st.selectbox("2. 所屬區域 *", ["深水埗區", "九龍城及油尖旺區", "觀塘區"])
-                reg_stu_id = st.text_input("3. 計劃編號 *", placeholder="例：CDF11/SSP/001").strip().upper()
+                reg_stu_id = st.text_input("3. 計劃編號 *", placeholder="例：001").strip().upper()
                 reg_phone4 = st.text_input("4. 登記電話最後 4 個字（身分核對）*", placeholder="例：1234", max_chars=4).strip()
-                reg_headcount = st.selectbox("5. 參加人數 *", ["1人 (學童)", "2人 (學童及家長)"])
+                reg_headcount = reg_headcount = st.selectbox("5. 參加人數 *", ["1人 (學童)", "2人 (學童及家長)", "3人 (學童及2位家人)", "3人 (學童、家長及友師)"])
                 
                 if st.form_submit_button("確認提交報名 🚀", use_container_width=True):
                     if not reg_stu_id:
