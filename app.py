@@ -228,7 +228,7 @@ with tab_savings:
 
     with st.form("savings_form", clear_on_submit=True):
         sav_district = st.selectbox("1. 所屬區份 *", ["深水埗 (SSP)", "九龍城及油尖旺 (KCY)", "觀塘 (KTG)"])
-        sav_student_id = st.text_input("2. 學生編號 *", placeholder="例：CDF11/SSP/001").strip().upper()
+        sav_student_id = st.text_input("2. 學生編號 *", placeholder="例：001").strip().upper()
         
         today = date.today()
         month_options = [
@@ -237,7 +237,7 @@ with tab_savings:
         ]
         sav_month = st.selectbox("3. 存款月份 *", month_options)
         sav_amount = st.number_input("4. 存款金額 (HK$) *", min_value=100.0, max_value=1000.0, value=200.0, step=50.0)
-        sav_depositor = st.text_input("5. 存款人姓名／關係 *", placeholder="例：陳大文 (父親)").strip()
+        sav_depositor = st.text_input("5. 存款人姓名 *", placeholder="例：CHAN TAI MAN").strip()
         
         col1, col2 = st.columns(2)
         with col1:
@@ -251,7 +251,7 @@ with tab_savings:
             if not sav_student_id:
                 st.error("請填寫學生編號！")
             elif not sav_depositor:
-                st.error("請填寫存款人姓名或關係！")
+                st.error("請填寫存款人姓名！")
             elif sav_file is None:
                 st.error("請拍攝並上傳入數紙相片！")
             else:
@@ -318,7 +318,7 @@ with tab_mentors:
 
         m_col3, m_col4 = st.columns(2)
         with m_col3:
-            mentor_stu_id = st.text_input("配對學生編號 *", placeholder="例：015 或 CDF11/SSP/015").strip().upper()
+            mentor_stu_id = st.text_input("配對學生編號 *", placeholder="例：015 或 015").strip().upper()
         with m_col4:
             mentor_phone4 = st.text_input("友師登記電話最後 4 個字 *", placeholder="例：1234", max_chars=4).strip()
 
