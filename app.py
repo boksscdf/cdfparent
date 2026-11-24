@@ -13,9 +13,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 試算表網址與 Google Apps Script 上傳端點
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1cQlXUXPPjI7J3svQ0mVSuIKqvafkZ5WUaEqCU1_MfDs/edit"
-GAS_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbxBoon8E4PDr5k_xEfCY0VKYakWYizHSZe02_wOQ0RgOAoIoRIbbVe01q8fQzr7RDeF1A/exec"
+# 試算表網址與 Google Apps Script 上傳端點（優先讀取 Secrets，若無則使用預設值）
+SPREADSHEET_URL = st.secrets.get(
+    "SPREADSHEET_URL",
+    "https://docs.google.com/spreadsheets/d/1cQlXUXPPjI7J3svQ0mVSuIKqvafkZ5WUaEqCU1_MfDs/edit"
+)
+GAS_UPLOAD_URL = st.secrets.get(
+    "GAS_UPLOAD_URL",
+    "https://script.google.com/macros/s/AKfycbxBoon8E4PDr5k_xEfCY0VKYakWYizHSZe02_wOQ0RgOAoIoRIbbVe01q8fQzr7RDeF1A/exec"
+)
 
 # 青瓷綠 CSS 風格
 st.markdown("""
@@ -57,18 +63,30 @@ st.markdown('<div class="sub-title">浸信會愛羣社會服務處 · 家長、�
 # 2. 連接 Google Sheet
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 上傳入數紙到 Google Drive 輔助函數 (透過 Google Apps Script 中轉)
-def upload_receipt_to_drive(uploaded_file, student_id, year_month):
+# 上傳入數紙到 Google Drive 輔助函數 (透過 Google Apps Script 按分區及月份分類儲存)
+def upload_receipt_to_drive(uploaded_file, student_id, year_month, district):
     try:
         file_ext = uploaded_file.name.split('.')[-1]
         custom_filename = f"DEP_{year_month}_{student_id.replace('/', '_')}_{int(datetime.now().timestamp())}.{file_ext}"
 
         base64_data = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
+        # 轉換為對應的資料夾名稱 (SSP / KCY / KTG)
+        if "SSP" in district or "深水埗" in district:
+            district_folder = "SSP"
+        elif "KCY" in district or "九龍城" in district:
+            district_folder = "KCY"
+        elif "KTG" in district or "觀塘" in district:
+            district_folder = "KTG"
+        else:
+            district_folder = "其他"
+
         payload = {
             "filename": custom_filename,
             "mimeType": uploaded_file.type or "image/jpeg",
-            "base64": base64_data
+            "base64": base64_data,
+            "district": district_folder,
+            "year_month": year_month
         }
 
         res = requests.post(GAS_UPLOAD_URL, json=payload, timeout=60)
@@ -105,12 +123,12 @@ with tab_news:
             if "是否置頂(Is_Pinned)" in news_df.columns:
                 news_df["是否置頂(Is_Pinned)"] = news_df["是否置頂(Is_Pinned)"].fillna("").astype(str).str.strip().str.upper().isin(["TRUE", "1", "YES", "是"])
                 news_df = news_df.sort_values(by=["是否置頂(Is_Pinned)", "日期(Date)"], ascending=[False, False])
-            
+
             for _, item in news_df.iterrows():
                 is_pinned = item.get("是否置頂(Is_Pinned)", False)
                 pin_tag = '<span class="badge-pinned">置頂重要</span> ' if is_pinned else ''
                 category = item.get('消息類別(Category)', '提示')
-                
+
                 st.markdown(f"""
                 <div class="news-card">
                     <div style="font-size: 11px; color: #888; margin-bottom: 4px;">
@@ -148,7 +166,7 @@ with tab_activities:
             open_acts = activities_df[activities_df[status_col].astype(str).str.strip().isin(["接受報名", "開放報名", "開放中"])]
         else:
             open_acts = pd.DataFrame()
-        
+
         if open_acts.empty:
             st.info("目前暫未有開放報名的活動。")
         else:
@@ -158,10 +176,10 @@ with tab_activities:
                 act_title = act.get('活動名稱(Title)', '')
                 cat_id = act.get('主題類別(Cat_ID)', '')
                 cat_badge = f'<span class="badge-cat">{cat_id}</span>' if pd.notna(cat_id) and str(cat_id).strip() else ''
-                
+
                 label = f"{act_title} ({act.get('活動日期及時間(Date_Time)', '')})"
                 act_dict[label] = (act_id, act_title)
-                
+
                 st.markdown(f"""
                 <div class="activity-card">
                     <span class="badge-tag">{act.get(status_col, '接受報名')}</span>{cat_badge}
@@ -169,21 +187,21 @@ with tab_activities:
                     <div style="font-size: 12px; color: #555; line-height: 1.6; margin-top: 4px;">
                         👥 <b>類別/對象</b>：{act_id} / {act.get('對象(Target)', '')}<br>
                         📅 <b>時間</b>：{act.get('活動日期及時間(Date_Time)', '')}<br>
-                        📍 <b>地點</b>：{act.get('活動地點(Venue)', '')} | 👥 <b>名額</b>：{act.get('名額(Quota)', '')} <br>
+                        📍 <b>地點</b>：{act.get('活動地點(Venue)', '')} | 👥 <b>名額</b>：{act.get('名額(Quota)', '')} 人<br>
                         📝 <b>詳情</b>：{act.get('活動詳情(Details)', '無')}
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-            
+
             st.write("---")
             with st.form("reg_form", clear_on_submit=True):
                 st.write("##### 填寫活動報名")
                 chosen_act = st.selectbox("1. 選擇報名活動 *", list(act_dict.keys()))
                 reg_district = st.selectbox("2. 所屬區域 *", ["深水埗區", "九龍城及油尖旺區", "觀塘區"])
-                reg_stu_id = st.text_input("3. 計劃編號 *", placeholder="例：001").strip().upper()
+                reg_stu_id = st.text_input("3. 計劃編號 *", placeholder="例：CDF11/SSP/001").strip().upper()
                 reg_phone4 = st.text_input("4. 登記電話最後 4 個字（身分核對）*", placeholder="例：1234", max_chars=4).strip()
-                reg_headcount = reg_headcount = st.selectbox("5. 參加人數 *", ["1人 (學童)", "1人 (家長)", "2人 (學童及家長)", "3人 (學童及2位家人)", "3人 (學童、家長及友師)"])
-                
+                reg_headcount = st.selectbox("5. 參加人數 *", ["1人 (學童)", "2人 (學童及家長)"])
+
                 if st.form_submit_button("確認提交報名 🚀", use_container_width=True):
                     if not reg_stu_id:
                         st.error("請輸入計劃編號！")
@@ -191,14 +209,18 @@ with tab_activities:
                         st.error("電話最後 4 個字必須為 4 位數字！")
                     else:
                         act_id, act_title = act_dict[chosen_act]
-                        
+
                         reg_data = conn.read(worksheet="Registrations", ttl=0)
                         if reg_data is not None:
                             reg_data = reg_data.dropna(how="all")
                         else:
                             reg_data = pd.DataFrame()
 
-                        district_reg_col = [c for c in reg_data.columns if ("區" in c or "District" in c)][0] if (not reg_data.empty and any(("區" in c or "District" in c) for c in reg_data.columns)) else "所屬區域(District)"
+                        district_reg_col = (
+                            [c for c in reg_data.columns if ("區" in c or "District" in c)][0]
+                            if (not reg_data.empty and any(("區" in c or "District" in c) for c in reg_data.columns))
+                            else "所屬區域(District)"
+                        )
 
                         new_reg = pd.DataFrame([{
                             "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -228,8 +250,8 @@ with tab_savings:
 
     with st.form("savings_form", clear_on_submit=True):
         sav_district = st.selectbox("1. 所屬區份 *", ["深水埗 (SSP)", "九龍城及油尖旺 (KCY)", "觀塘 (KTG)"])
-        sav_student_id = st.text_input("2. 學生編號 *", placeholder="例：001").strip().upper()
-        
+        sav_student_id = st.text_input("2. 學生編號 *", placeholder="例：CDF11/SSP/001").strip().upper()
+
         today = date.today()
         month_options = [
             f"{today.year}年{today.month}月",
@@ -237,8 +259,8 @@ with tab_savings:
         ]
         sav_month = st.selectbox("3. 存款月份 *", month_options)
         sav_amount = st.number_input("4. 存款金額 (HK$) *", min_value=100.0, max_value=1000.0, value=200.0, step=50.0)
-        sav_depositor = st.text_input("5. 存款人姓名 *", placeholder="例：CHAN TAI MAN").strip()
-        
+        sav_depositor = st.text_input("5. 存款人姓名／關係 *", placeholder="例：陳大文 (父親)").strip()
+
         col1, col2 = st.columns(2)
         with col1:
             sav_date = st.date_input("6. 存款日期 *", value=today)
@@ -249,22 +271,26 @@ with tab_savings:
 
         if st.form_submit_button("確認上傳存款憑證 📤", use_container_width=True):
             if not sav_student_id:
-                st.error("未能成功上傳，請填寫學生編號！")
+                st.error("請填寫學生編號！")
             elif not sav_depositor:
-                st.error("未能成功上傳，請填寫存款人姓名！")
+                st.error("請填寫存款人姓名或關係！")
             elif sav_file is None:
-                st.error("未能成功上傳，請拍攝並上傳入數紙相片！")
+                st.error("請拍攝並上傳入數紙相片！")
             else:
                 with st.spinner("正在上傳憑證並寫入紀錄..."):
-                    receipt_link = upload_receipt_to_drive(sav_file, sav_student_id, sav_month)
-                    
+                    receipt_link = upload_receipt_to_drive(sav_file, sav_student_id, sav_month, sav_district)
+
                     sav_data = conn.read(worksheet="Savings", ttl=0)
                     if sav_data is not None:
                         sav_data = sav_data.dropna(how="all")
                     else:
                         sav_data = pd.DataFrame()
 
-                    district_col = [c for c in sav_data.columns if "所屬區份" in c][0] if (not sav_data.empty and any("所屬區份" in c for c in sav_data.columns)) else "所屬區份(District)"
+                    district_col = (
+                        [c for c in sav_data.columns if "所屬區份" in c][0]
+                        if (not sav_data.empty and any("所屬區份" in c for c in sav_data.columns))
+                        else "所屬區份(District)"
+                    )
 
                     new_savings = pd.DataFrame([{
                         "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -298,7 +324,6 @@ with tab_mentors:
     """, unsafe_allow_html=True)
 
     today = date.today()
-    # 提供當前月份及前兩個月份供選擇
     mentor_month_options = []
     y, m = today.year, today.month
     for _ in range(3):
@@ -318,19 +343,19 @@ with tab_mentors:
 
         m_col3, m_col4 = st.columns(2)
         with m_col3:
-            mentor_stu_id = st.text_input("配對學生編號 *", placeholder="例：015").strip().upper()
+            mentor_stu_id = st.text_input("配對學生編號 *", placeholder="例：015 或 CDF11/SSP/015").strip().upper()
         with m_col4:
             mentor_phone4 = st.text_input("友師登記電話最後 4 個字 *", placeholder="例：1234", max_chars=4).strip()
 
         st.write("---")
         st.write("##### 2. 接觸情況及次數")
-        
+
         no_contact = st.checkbox("⚠️ 本月份未有接觸學童", value=False)
         st.caption("請填寫該月份各方式的接觸次數（若本月有接觸，請填寫對應次數）：")
 
         c1, c2 = st.columns(2)
         with c1:
-            sms_count = st.number_input("📱 社交短訊（WhatsApp / WeChat 等）次數", min_value=0, max_value=100, value=0, step=1)
+            sms_count = st.number_input("📱 社交短訊（WhatsApp / Signal 等）次數", min_value=0, max_value=100, value=0, step=1)
             f2f_count = st.number_input("👥 面對面接觸次數", min_value=0, max_value=100, value=0, step=1)
         with c2:
             call_count = st.number_input("📞 電話通話次數", min_value=0, max_value=100, value=0, step=1)
@@ -342,11 +367,11 @@ with tab_mentors:
         if st.form_submit_button("確認提交友師記錄 🚀", use_container_width=True):
             total_contacts = sms_count + call_count + f2f_count + other_count
             if not mentor_stu_id:
-                st.error("未能成功上傳，請填寫配對學生編號！")
+                st.error("請填寫配對學生編號！")
             elif len(mentor_phone4) != 4 or not mentor_phone4.isdigit():
-                st.error("未能成功上傳，友師登記電話最後 4 個字必須為 4 位數字！")
+                st.error("友師登記電話最後 4 個字必須為 4 位數字！")
             elif not no_contact and total_contacts == 0:
-                st.error("未能成功上傳，若本月份有接觸學童，請至少填寫一項接觸次數；若本月完全未有接觸，請勾選「本月份未有接觸學童」！")
+                st.error("若本月份有接觸學童，請至少填寫一項接觸次數；若本月完全未有接觸，請勾選「本月份未有接觸學童」！")
             else:
                 try:
                     try:
