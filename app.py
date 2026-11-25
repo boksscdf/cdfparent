@@ -259,7 +259,7 @@ with tab_savings:
         ]
         sav_month = st.selectbox("3. 存款月份 *", month_options)
         sav_amount = st.number_input("4. 存款金額 (HK$) *", min_value=100.0, max_value=1000.0, value=200.0, step=50.0)
-        sav_depositor = st.text_input("5. 存款人姓名 *", placeholder="例：陳大文").strip()
+        sav_depositor = st.text_input("5. 存款人姓名(中/英皆可) *", placeholder="例：陳大文").strip()
 
         col1, col2 = st.columns(2)
         with col1:
