@@ -200,7 +200,7 @@ with tab_activities:
                 reg_district = st.selectbox("2. 所屬區域 *", ["深水埗區", "九龍城及油尖旺區", "觀塘區"])
                 reg_stu_id = st.text_input("3. 計劃編號(只需輸入最後3位數字號碼) *", placeholder="例：001").strip().upper()
                 reg_phone4 = st.text_input("4. 登記電話最後 4 個字（身分核對）*", placeholder="例：1234", max_chars=4).strip()
-                reg_headcount = st.selectbox("5. 參加人數 *", ["1人 (學童)", "2人 (學童及家長)"])
+                reg_headcount = st.selectbox("5. 參加人數 *", ["1人 (學童)", 1人 (家長), "2人 (學童及家長), 3人 (學生、家長及友師)"])
 
                 if st.form_submit_button("確認提交報名 🚀", use_container_width=True):
                     if not reg_stu_id:
